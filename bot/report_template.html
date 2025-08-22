@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VulnStrike Report: {{ vulnerability_name }}</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;700&family=Orbitron:wght@700&display=swap');
+        :root {
+            --primary-color: #00ffff;
+            --border-color-alpha: rgba(0, 255, 255, 0.25);
+            --background-color: #0a0f1a;
+            --container-bg-color: #101829;
+            --text-color: #c0c5d9;
+            --value-color: #ffffff;
+            --header-font: 'Orbitron', sans-serif;
+            --body-font: 'Fira Code', monospace;
+            --glow-color: rgba(0, 255, 255, 0.75);
+        }
+        ::-webkit-scrollbar { width: 10px; }
+        ::-webkit-scrollbar-track { background: var(--background-color); border-left: 1px solid var(--border-color-alpha); }
+        ::-webkit-scrollbar-thumb { background: var(--primary-color); border-radius: 5px; box-shadow: 0 0 5px var(--glow-color); }
+        ::-webkit-scrollbar-thumb:hover { background: #fff; }
+        body { background-color: var(--background-color); color: var(--text-color); font-family: var(--body-font); line-height: 1.7; margin: 0; padding: 2rem; overflow-x: hidden; }
+        #cyber-background { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; background: var(--background-color); background-image: linear-gradient(var(--border-color-alpha) 1px, transparent 1px), linear-gradient(to right, var(--border-color-alpha) 1px, transparent 1px); background-size: 40px 40px; }
+        .container { max-width: 960px; margin: auto; background-color: var(--container-bg-color); border: 1px solid var(--border-color-alpha); box-shadow: 0 0 30px rgba(0, 0, 0, 0.2); padding: 2rem 3rem; border-radius: 8px; position: relative; }
+        .header { text-align: center; border-bottom: 1px solid var(--border-color-alpha); padding-bottom: 1.5rem; margin-bottom: 2rem; }
+        .header h1 { font-family: var(--header-font); color: var(--primary-color); font-size: 2.8rem; margin: 0; text-shadow: 0 0 5px var(--glow-color), 0 0 10px var(--glow-color); letter-spacing: 2px; }
+        .header p { font-family: var(--header-font); font-size: 0.9em; letter-spacing: 1.5px; opacity: 0.8; margin-top: 0.5rem; text-transform: uppercase; }
+        h2 { font-family: var(--header-font); color: var(--primary-color); text-shadow: 0 0 8px var(--glow-color); border-bottom: 1px solid var(--border-color-alpha); padding-bottom: 0.5rem; display: inline-block; }
+        .section { margin-bottom: 2.5rem; }
+        .content-frame { border: 1px solid var(--border-color-alpha); padding: 1.5rem; border-radius: 8px; margin-top: 1rem; }
+        .content-frame p, .content-frame ol { font-size: 1em; line-height: 1.8; margin: 0.5em 0; }
+        
+        .summary-p, .summary-p strong, .summary-p .value, .summary-p code {
+            color: var(--value-color) !important;
+            font-weight: bold;
+            font-size: 1em !important;
+            font-family: var(--body-font) !important;
+            opacity: 1;
+        }
+        .url-list a, .sqli-result-card a {
+            display: block; 
+            color: var(--value-color); 
+            text-decoration: none; 
+            padding: 8px 12px; 
+            margin-bottom: 5px; 
+            border-radius: 4px; 
+            word-break: break-all; 
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+        .url-list a:hover, .sqli-result-card a:hover { background-color: var(--primary-color); color: var(--background-color); text-decoration: none; }
+        .sqli-result-card { border: 1px solid var(--border-color-alpha); border-radius: 5px; padding: 1.5rem; margin-bottom: 1.5rem; background-color: transparent; }
+        .sqli-result-card h3 { margin-top: 0; color: var(--primary-color); font-size: 1.1em; text-transform: uppercase; letter-spacing: 1px; }
+        pre { background: transparent; border: none; padding: 0; margin-top: 0; box-shadow: none; white-space: pre-wrap; word-wrap: break-word; color: var(--text-color); font-family: var(--body-font); font-size: 1em; line-height: 1.8; }
+        .recommendation-header { color: var(--value-color); font-weight: bold; margin-bottom: 1rem; font-size: 1em; }
+        .recommendation-list { list-style-position: outside; padding-left: 20px; font-size: 1em; line-height: 1.8; }
+        .recommendation-list li { 
+            padding-left: 10px; 
+            margin-bottom: 12px; 
+            color: var(--value-color); 
+            font-weight: bold;
+            font-family: var(--body-font);
+        }
+        .footer { text-align: center; margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--border-color-alpha); font-size: 0.8em; color: rgba(255, 255, 255, 0.5); }
+        .url-list a:hover {
+            transform: translateX(5px);
+            box-shadow: 0 4px 15px rgba(0, 255, 255, 0.3);
+        }
+
+        .info-list-text span {
+            display: block; /* Membuat setiap item di baris baru */
+            padding: 8px 12px;
+            margin-bottom: 5px;
+            background-color: rgba(0, 0, 0, 0.15);
+            border-radius: 5px;
+            color: var(--value-color); /* PERBAIKAN: Warna teks dibuat terang */
+            font-family: var(--body-font); /* PERBAIKAN: Font disamakan */
+            word-break: break-all; /* Mencegah teks panjang merusak layout */
+        }
+        
+        /* GAYA BARU UNTUK TEKS PLACEHOLDER */
+        .placeholder-text {
+            color: var(--value-color);
+            font-family: var(--body-font);
+            font-weight: bold;
+        }
+
+        /* --- GAYA BARU UNTUK DETAIL SQLi (DIPERBAIKI SESUAI FEEDBACK) --- */
+        .sqli-details-pre {
+            /* Menyamakan gaya dengan Ringkasan Eksekutif */
+            color: var(--value-color); /* Warna teks terang (putih) */
+            font-family: var(--body-font);
+            font-weight: bold; /* Teks tebal */
+            font-size: 1em;
+
+            /* Menghapus hiasan blok (garis biru, background, dll.) */
+            border: none;
+            padding: 0;
+            background-color: transparent;
+
+            /* Menjaga format teks dari sqlmap */
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            line-height: 1.8;
+            
+            /* Memberi sedikit spasi dari header "Teknik Injeksi" */
+            margin-top: 0.5rem; 
+        }
+
+        /* --- TAMBAHKAN GAYA INI --- */
+        /* --- GAYA INI AKAN DIHAPUS KARENA MENYEBABKAN FONT TIDAK KONSISTEN --- */
+        /*
+        .info-category h3 {
+            color: var(--primary-color); 
+            font-family: var(--header-font);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 1.1em;
+            margin-bottom: 1rem;
+            border-left: 3px solid var(--primary-color);
+            padding-left: 10px;
+        }
+        */
+        /* --- AKHIR PENAMBAHAN --- */
+
+        .info-category {
+            margin-bottom: 25px;
+        }
+
+        /* --- PERBAIKAN 1: Gunakan Direct Child Selector (>) --- */
+        /* Ini adalah perbaikan KUNCI untuk gaya font SQL Injection.
+           Tanda '>' memastikan aturan ini HANYA berlaku untuk judul modul
+           (misal: <h3>SQL INJECTION</h3>) dan TIDAK "bocor" ke sub-judul di dalamnya
+           (misal: <h3>URL Target</h3>). Mohon pastikan perubahan ini diterapkan. */
+        .info-category > h3 {
+            color: var(--primary-color); /* Warna cyan terang */
+            font-family: var(--header-font);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 1.1em;
+            margin-bottom: 1rem;
+            border-left: 3px solid var(--primary-color);
+            padding-left: 10px;
+        }
+    </style>
+
+    {# PERBAIKAN 2: Makro untuk memastikan rendering SQLi konsisten #}
+    {% macro render_sqli_finding(finding) %}
+        <div class="sqli-result-card">
+            <h3>URL Target</h3>
+            <a href="{{ finding.url | e }}" target="_blank" rel="noopener noreferrer">{{ finding.url | e }}</a>
+            
+            <h3>Teknik Injeksi</h3>
+            <pre class="sqli-details-pre">{{ finding.technique }}</pre>
+
+            <h3>Database Ditemukan</h3>
+            <div style="margin-top: 0.5rem;">
+                {% if finding.databases %}
+                    {% for db in finding.databases %}
+                        <div class="placeholder-text">{{ db | e }}</div>
+                    {% endfor %}
+                {% else %}
+                    <div class="placeholder-text">Tidak ada database yang berhasil di-dump.</div>
+                {% endif %}
+            </div>
+
+            <h3 style="margin-top: 1.5rem;">Status</h3>
+            <p class="placeholder-text">{{ finding.status }}</p>
+        </div>
+    {% endmacro %}
+</head>
+<body>
+    <div id="cyber-background"></div>
+    <div class="container">
+        <div class="header"><h1>VulnStrike Report</h1><p>Automated Penetration Test Result</p></div>
+        <div class="section">
+            <h2>Ringkasan Eksekutif</h2>
+            <div class="content-frame">
+                <p class="summary-p"><strong>Jenis Kerentanan:</strong> <span class="value">{{ vulnerability_name }}</span></p>
+                <p class="summary-p"><strong>Target Domain:</strong> <code><span class="value">{{ target_domain }}</span></code></p>
+                <p class="summary-p"><strong>Waktu Selesai Uji Penetrasi:</strong> <span class="value">{{ scan_timestamp }}</span></p>
+                {% if summary %}<p class="summary-p"><strong>Hasil:</strong> <span class="value">{{ summary }}</span></p>{% endif %}
+                {% if scan_duration %}<p class="summary-p"><strong>Total Waktu Pengujian:</strong> <span class="value">{{ scan_duration }}</span></p>{% endif %}
+            </div>
+        </div>
+
+        {# =================================================================== #}
+        {# ====== BLOK KONTEN UTAMA: DIBAGI DUA UNTUK LAPORAN BERBEDA ====== #}
+        {# =================================================================== #}
+
+        {% if vulnerability_name == "Semua Kerentanan" %}
+        {# ====== TAMPILAN 1: LAPORAN GABUNGAN "SEMUA KERENTANAN" ====== #}
+            
+            {# PERBAIKAN 3: Hapus bagian "Ringkasan Tabel Modul" #}
+
+            <div class="section">
+                <h2>Rincian Hasil per Modul</h2>
+                {# PERBAIKAN 1 & 4: Tampilkan detail dan statistik di sini #}
+                <div class="content-frame">
+                {% if all_modules_findings %}
+                    {% for module in all_modules_findings %}
+                        <div class="info-category">
+                            <h3>{{ module.name }}</h3>
+                            
+                            <div class="summary-p" style="padding-left: 15px; margin-bottom: 1rem; line-height: 1.8;">
+                                {% if module.type == 'info_gathering' %}
+                                    {# Statistik khusus untuk Info Gathering #}
+                                    <div><strong>File JavaScript:</strong> {{ module.stats['File JavaScript'] | default('0') }}</div>
+                                    <div><strong>API/Secret leaks:</strong> {{ module.stats['API/Secret leaks'] | default('0') }}</div>
+                                    <div><strong>Direktori tersembunyi:</strong> {{ module.stats['Direktori tersembunyi'] | default('0') }}</div>
+                                    <div><strong>Teknologi:</strong> {{ module.stats['Teknologi terdeteksi'] | default('0') }}</div>
+                                    <div><strong>Exposure ditemukan:</strong> {{ module.stats['Exposure ditemukan'] | default('0') }}</div>
+                                    <div><strong>Reverse IP:</strong> {{ module.stats['Reverse IP results'] | default('0') }}</div>
+                                {% else %}
+                                    {# Statistik standar untuk modul kerentanan lain #}
+                                    <div><strong>Total URL Diuji:</strong> {{ module.stats.total_tested | default('0') }}</div>
+                                    <div><strong>Hasil Valid:</strong> {{ module.stats.valid_results | default('0') }}</div>
+                                {% endif %}
+                                {% if module.stats.exec_time %}
+                                    {# PERBAIKAN: Ganti label waktu #}
+                                    <div><strong>Waktu Pengujian:</strong> {{ module.stats.exec_time }}</div>
+                                {% endif %}
+                            </div>
+
+                            {# -- Blok Tampilan Detail (Sudah diperbarui di perubahan sebelumnya, sekarang akan menerima data yang benar) -- #}
+                            {% if module.type == 'standard' and module.details.urls %}
+                                <div class="url-list" style="margin-left: 15px;">
+                                    {% for url in module.details.urls %}<a href="{{ url | e }}" target="_blank" rel="noopener noreferrer">{{ url | e }}</a>{% endfor %}
+                                </div>
+                            {% elif module.type == 'sqli' and module.details.findings %}
+                                {% for finding in module.details.findings %}
+                                    {# Panggil makro SQLi dengan margin untuk perataan #}
+                                    <div style="margin-left: 15px;">
+                                        {{ render_sqli_finding(finding) }}
+                                    </div>
+                                {% endfor %}
+                            {% elif module.type == 'info_gathering' and module.details.findings %}
+                                {% for category, items in module.details.findings.items() %}
+                                    {# PERBAIKAN 3.2: Gunakan div dengan class summary-p, bukan h4, untuk gaya yang konsisten #}
+                                    <div class="summary-p" style="padding-left: 15px; margin-top: 1.5rem;">{{ category }} ({{ items|length }})</div>
+                                    {% set is_linkable = 'Direktori' in category or 'Exposure' in category or 'JavaScript' in category %}
+                                    {% if is_linkable %}
+                                        <div class="url-list" style="margin-left: 15px;">
+                                            {% for item in items %}<a href="{{ item | e }}" target="_blank" rel="noopener noreferrer">{{ item | e }}</a>{% endfor %}
+                                        </div>
+                                    {% else %}
+                                        <div class="info-list-text" style="margin-left: 15px;">
+                                            {% for item in items %}<span>{{ item | e }}</span>{% endfor %}
+                                        </div>
+                                    {% endif %}
+                                {% endfor %}
+                            {% else %}
+                                <p class="placeholder-text" style="padding-left: 15px;">Tidak ditemukan temuan rinci untuk modul ini.</p>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                {% else %}
+                     <p class="placeholder-text">Tidak ditemukan temuan pada modul manapun.</p>
+                {% endif %}
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>Rekomendasi Mitigasi Gabungan</h2>
+                <div class="content-frame">
+                {% if all_modules_recommendations %}
+                    {% for rec in all_modules_recommendations %}
+                        <div class="info-category">
+                            <h3>{{ rec.name }}</h3>
+                            {# BARIS INI DITAMBAHKAN untuk menampilkan header rekomendasi #}
+                            {% if rec.header %}<p class="recommendation-header">{{ rec.header }}</p>{% endif %}
+                            <ol class="recommendation-list">
+                                {% for point in rec.points %}<li>{{ point }}</li>{% endfor %}
+                            </ol>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="placeholder-text">Tidak ada rekomendasi mitigasi yang diberikan.</p>
+                {% endif %}
+                </div>
+            </div>
+
+        {% else %}
+        {# ====== TAMPILAN 2: LAPORAN MODUL INDIVIDUAL (SEPERTI SEBELUMNYA) ====== #}
+            <div class="section">
+                <h2>Rincian Hasil</h2>
+                <div class="content-frame">
+                    {% if info_gathering_results %}
+                        {% for category, items in info_gathering_results.items() %}
+                            <div class="info-category">
+                                <h3>{{ category }} ({{ items|length }})</h3>
+                                
+                                {# --- PERBAIKAN LOGIKA TAMPILAN --- #}
+                                {# Gunakan styling 'url-list' untuk kategori yang berisi URL #}
+                                {% if 'Direktori' in category or 'Exposure' in category or 'JavaScript' in category %}
+                                    <div class="url-list">
+                                        {% for item in items %}
+                                            <a href="{{ item | e }}" target="_blank" rel="noopener noreferrer">{{ item | e }}</a>
+                                        {% endfor %}
+                                    </div>
+                                {# Gunakan styling list teks biasa untuk kategori lain #}
+                                {% else %}
+                                    <div class="info-list-text">
+                                        {% for item in items %}
+                                            <span>{{ item | e }}</span>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    {% elif sqli_findings %}
+                        {% for finding in sqli_findings %}
+                            {# Panggil makro SQLi untuk laporan tunggal #}
+                            {{ render_sqli_finding(finding) }}
+                        {% endfor %}
+                    {% else %}
+                        <div class="url-list">
+                            {% if vulnerable_urls %}
+                                {% for url in vulnerable_urls %}
+                                    <a href="{{ url | e }}" target="_blank" rel="noopener noreferrer">{{ url | e }}</a>
+                                {% endfor %}
+                            {% else %}
+                                <p class="placeholder-text">Tidak ditemukan URL yang terbukti rentan.</p>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="section">
+                <h2>Rekomendasi Mitigasi</h2>
+                <div class="content-frame">
+                    {% if recommendations and recommendations.points %}
+                        <p class="recommendation-header">{{ recommendations.header }}</p>
+                        <ol class="recommendation-list">
+                            {% for point in recommendations.points %}<li>{{ point }}</li>{% endfor %}
+                        </ol>
+                    {% else %}
+                        {# Pesan khusus untuk Info Gathering #}
+                        {% if vulnerability_name == "Info Gathering" %}
+                            <p class="placeholder-text">Tidak ada rekomendasi mitigasi yang relevan untuk hasil pengumpulan informasi.</p>
+                        {% else %}
+                            <p class="placeholder-text">Tidak ada rekomendasi mitigasi yang diberikan.</p>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+        <div class="footer">
+            <p>&copy; {{ scan_timestamp.split(' ')[0][:4] }} VulnStrike Bot | Developed by Ahmad Izza A. | Report Generated Automatically</p>
+        </div>
+    </div>
+</body>
+</html> 
